@@ -11,8 +11,8 @@ project_root = Path(os.path.abspath("")).parent
 if project_root not in sys.path:
     sys.path.append(str(project_root))
 
-from src.models.compressai_chang2020_model.train_batch import train_batch, train_batch_optuna
-from src.models.compressai_chang2020_model.validate_batch import compute_val_metrics, compute_val_metrics_optuna
+from src.models.compressai_cheng2020_model.train_batch import train_batch, train_batch_optuna
+from src.models.compressai_cheng2020_model.validate_batch import compute_val_metrics, compute_val_metrics_optuna
 
 def train_model(model, train_loader, val_loader, loss_fn, optimizer, scheduler, output_model_path, nombre_modelo, num_epochs, device, writer):
     best_val_loss = float('inf')

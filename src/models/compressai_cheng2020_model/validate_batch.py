@@ -1,5 +1,4 @@
 import torch
-import math
 
 import sys
 from pathlib import Path
@@ -15,7 +14,7 @@ project_root = Path(os.path.abspath("")).parent
 if project_root not in sys.path:
     sys.path.append(str(project_root))
 
-from src.utils.metrics import compute_compression_ratio
+from src.utils.metrics import compute_compression_ratio, compute_bpp
 
 @torch.no_grad()
 def compute_val_metrics(model, val_loader, loss_fn, device):
@@ -49,12 +48,6 @@ def compute_val_metrics(model, val_loader, loss_fn, device):
     avg_compression_ratio = sum(compression_ratios) / len(compression_ratios)
     return val_loss, val_psnr, val_ssim, avg_compression_ratio
 
-def compute_bpp(out_net):
-    size = out_net['x_hat'].size()
-    num_pixels = size[0] * size[2] * size[3]
-    return sum(torch.log(likelihoods).sum() / (-math.log(2) * num_pixels)
-              for likelihoods in out_net['likelihoods'].values()).item()
-
 @torch.no_grad()
 def compute_val_metrics_optuna(model, val_loader, loss_fn, device, lambda_value):
     model.eval()
@@ -72,7 +65,7 @@ def compute_val_metrics_optuna(model, val_loader, loss_fn, device, lambda_value)
         x_hat = output['x_hat']
         #bit_rate = output['bpp']  # Asumiendo que 'bpp' es la tasa de bits
         bit_rate = compute_bpp(output)  # Asumiendo que 'bpp' es la tasa de bits
-        
+
         loss = loss_fn(x, x_hat, bit_rate, lambda_value)  # Pasar lambda_value a la función de pérdida
         val_loss += loss.item()
 

@@ -1,5 +1,5 @@
-import math
 import torch
+from src.utils.metrics import compute_bpp
 
 def train_batch(model, batch, loss_fn, optimizer, device):
     model.train()
@@ -15,12 +15,6 @@ def train_batch(model, batch, loss_fn, optimizer, device):
     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
     optimizer.step()
     return loss.item()
-
-def compute_bpp(out_net):
-    size = out_net['x_hat'].size()
-    num_pixels = size[0] * size[2] * size[3]
-    return sum(torch.log(likelihoods).sum() / (-math.log(2) * num_pixels)
-              for likelihoods in out_net['likelihoods'].values()).item()
 
 def train_batch_optuna(model, batch, loss_fn, optimizer, device, lambda_value):
     model.train()

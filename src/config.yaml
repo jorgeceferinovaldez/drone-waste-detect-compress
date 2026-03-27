@@ -1,26 +1,234 @@
-# config.yaml
+# config.yaml — drone-waste-detect-compress
+# Proyecto: compresión con cheng2020-anchor + detección YOLO sobre residuos costeros
+# Autor: Jorge Ceferino Valdez (UNPA)
 
+# ---------------------------------------------------------------------------
+# Datos
+# ---------------------------------------------------------------------------
 data:
-  google_drive_file_id: "1LxVQ6na5njNsWWwYD_d2LswPoaRsor9C"  # ID del archivo en Google Drive
-  google_drive_file_id_tl1: "1GrI_yuVwTlDXK_x5YXmlVw1T1FsdImxu"  # ID del archivo en Google Drive del modelo preentrenado
   raw_data_dir: "data/raw"
   interim_data_dir: "data/interim"
   processed_data_dir: "data/processed"
   external_data_dir: "data/external"
 
-models:
-  trained_models_dir: "models"
-  predictions_dir: "models/predictions"
-  summaries_dir: "models/summaries"
-  pretrained_dir: "models/pretrained"  # Para almacenar los modelos preentrenados
+  # Datasets públicos de bootstrap (almacenados en data/external/)
+  public_datasets:
+    beach_litter_uav:
+      name: "Beach-Litter-UAV"
+      n_images: 534
+      format: "yolo"
+    uavvaste:
+      name: "UAVVaste"
+      n_images: 772
+      format: "coco"       # requiere conversión con convert_coco
+    taco:
+      name: "TACO"
+      n_images: 5200
+      format: "coco"       # requiere conversión con convert_coco
 
+  # Clases del dataset propio (residuos costeros Golfo San Jorge)
+  classes:
+    - plastico_rigido   # 0
+    - film_bolsa        # 1
+    - poliestireno      # 2
+    - metal             # 3
+    - vidrio            # 4
+    - red_pesca         # 5
+    - otros             # 6
+
+  # Splits
+  train_csv: "data/processed/train.csv"
+  val_csv: "data/processed/val.csv"
+  test_csv: "data/processed/test.csv"
+  val_size: 0.15
+  test_size: 0.10
+  random_seed: 42
+
+# ---------------------------------------------------------------------------
+# Modelos — rutas de salida
+# ---------------------------------------------------------------------------
+models:
+  trained_models_dir: "models/trained"
+  pretrained_dir: "models/pretrained"
+
+  # Pesos finales de cheng2020-anchor por calidad
+  cheng2020:
+    q1: "models/trained/cheng2020_anchor_q1.pth"
+    q2: "models/trained/cheng2020_anchor_q2.pth"
+    q3: "models/trained/cheng2020_anchor_q3.pth"
+    q4: "models/trained/cheng2020_anchor_q4.pth"
+    q5: "models/trained/cheng2020_anchor_q5.pth"
+    q6: "models/trained/cheng2020_anchor_q6.pth"
+
+  # Pesos finales de YOLO por variante
+  yolo:
+    baseline:      "models/trained/yolo_baseline/best.pt"
+    reconstructed: "models/trained/yolo_reconstructed/best.pt"
+    mixed:         "models/trained/yolo_mixed/best.pt"
+
+# ---------------------------------------------------------------------------
+# Parámetros de entrenamiento — cheng2020-anchor
+# ---------------------------------------------------------------------------
+compressai:
+  architecture: "cheng2020-anchor"
+  qualities: [1, 2, 3, 4, 5, 6]
+
+  training:
+    num_epochs: 100
+    batch_size: 16
+    image_size: 256          # las imágenes se redimensionan a 256×256 antes de entrenar
+    pad_multiple: 64         # pad_image_to_multiple — requerimiento de CompressAI
+    optimizer: "Adam"
+    learning_rate: 1.0e-4
+    weight_decay: 1.0e-5
+    scheduler: "ReduceLROnPlateau"
+    scheduler_patience: 5
+    scheduler_factor: 0.5
+    early_stop_patience: 15
+    grad_clip_norm: 1.0
+    loss: "MSE"              # alternativa: "MS-SSIM"
+
+  # λ por nivel de calidad — equilibrio distorsión/tasa
+  # Valores de referencia CompressAI; ajustados en optuna (notebook 4.1)
+  lambda_values:
+    q1: 0.0018
+    q2: 0.0035
+    q3: 0.0067
+    q4: 0.013
+    q5: 0.025
+    q6: 0.048
+
+  optuna:
+    n_trials: 50
+    n_epochs_per_trial: 30
+    lr_min: 1.0e-5
+    lr_max: 1.0e-3
+    wd_min: 1.0e-5
+    wd_max: 1.0e-3
+    batch_sizes: [8, 16, 32]
+    lambda_min: 1.0e-4
+    lambda_max: 0.1
+
+# ---------------------------------------------------------------------------
+# Parámetros de entrenamiento — YOLO
+# ---------------------------------------------------------------------------
+yolo:
+  architecture: "yolov8s"   # alternativa: yolov11s
+  imgsz: 640
+  epochs: 100
+  batch: 16
+  patience: 20
+  optimizer: "AdamW"
+  lr0: 1.0e-3
+  lrf: 0.01
+  workers: 8
+  device: "cuda"
+  random_seed: 42
+
+  # Variantes de entrenamiento
+  variants:
+    baseline:
+      description: "Entrenado con imágenes originales, evaluado sobre originales"
+      train_images: "data/processed/yolo_baseline/train"
+      val_images:   "data/processed/yolo_baseline/val"
+      log_dir:      "reports/logs/yolo_baseline"
+
+    reconstructed:
+      description: "Entrenado con imágenes reconstruidas, evaluado sobre reconstruidas"
+      train_images: "data/processed/yolo_reconstructed/train"
+      val_images:   "data/processed/yolo_reconstructed/val"
+      log_dir:      "reports/logs/yolo_reconstructed"
+
+    mixed:
+      description: "Entrenado con originales + reconstruidas, evaluado sobre reconstruidas"
+      train_images: "data/processed/yolo_mixed/train"
+      val_images:   "data/processed/yolo_mixed/val"
+      log_dir:      "reports/logs/yolo_mixed"
+
+# ---------------------------------------------------------------------------
+# Logs — TensorBoard por modelo y calidad
+# ---------------------------------------------------------------------------
+logs:
+  base_dir: "reports/logs"
+
+  cheng2020:
+    q1: "reports/logs/cheng2020_anchor_q1"
+    q2: "reports/logs/cheng2020_anchor_q2"
+    q3: "reports/logs/cheng2020_anchor_q3"
+    q4: "reports/logs/cheng2020_anchor_q4"
+    q5: "reports/logs/cheng2020_anchor_q5"
+    q6: "reports/logs/cheng2020_anchor_q6"
+
+  yolo:
+    baseline:      "reports/logs/yolo_baseline"
+    reconstructed: "reports/logs/yolo_reconstructed"
+    mixed:         "reports/logs/yolo_mixed"
+
+# ---------------------------------------------------------------------------
+# Experimento de throughput
+# ---------------------------------------------------------------------------
+throughput:
+  # Muestreo de frames del video del dron
+  # CompressAI comprime imágenes estáticas independientes (no codec de video)
+  # Los residuos son estáticos y el dron vuela lento → 1-5 fps es suficiente
+  frame_sampling_fps: [1, 2, 5]
+  default_fps: 1
+
+  # Arquitecturas comparadas
+  # A: JPG calidad 100 → red → YOLO  (baseline puro)
+  # B: JPG calidades variables → red → YOLO  (baseline compresión tradicional)
+  # C: cheng2020-anchor encoder → bytes → decoder → YOLO  (sistema propuesto)
+  architectures: ["A", "B", "C"]
+
+  # Niveles de calidad JPEG para arquitectura B
+  jpeg_qualities: [10, 20, 30, 50, 70, 85, 95]
+
+  # Niveles de calidad CompressAI para arquitectura C
+  compressai_qualities: [1, 2, 3, 4, 5, 6]
+
+  # Condiciones de red simuladas (ancho de banda en Mbps)
+  network_conditions:
+    local:
+      label: "Local (WiFi)"
+      bandwidth_mbps: 75.0      # valor representativo 50-100 Mbps
+      latency_ms: 1.0
+    starlink:
+      label: "Starlink Mini"
+      bandwidth_mbps: 50.0      # valor representativo 20-100 Mbps variable
+      latency_ms: 40.0
+    cellular_4g:
+      label: "4G"
+      bandwidth_mbps: 15.0      # valor representativo 10-20 Mbps
+      latency_ms: 30.0
+    limited:
+      label: "Canal limitado"
+      bandwidth_mbps: 2.0       # valor representativo 1-5 Mbps
+      latency_ms: 100.0
+
+  # Variables medidas por experimento
+  metrics:
+    - bytes_transmitted
+    - encode_time_ms
+    - decode_time_ms
+    - total_latency_ms
+    - effective_fps
+    - bpp
+    - psnr
+    - ssim
+    - map50                     # mAP@0.5 de YOLO sobre imagen resultante
+
+  # Resultado principal: curva BPP vs mAP (arquitecturas A, B, C superpuestas)
+  output_csv: "reports/throughput_results.csv"
+  output_figures_dir: "reports/figures/throughput"
+
+# ---------------------------------------------------------------------------
+# Informes y figuras
+# ---------------------------------------------------------------------------
 notebooks_dir: "notebooks"
 references_dir: "references"
 reports_dir: "reports"
 figures_dir: "reports/figures"
-
 docs_dir: "docs"
 requirements_file: "requirements.txt"
 setup_file: "setup.py"
 tox_file: "tox.ini"
-

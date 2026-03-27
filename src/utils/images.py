@@ -1,10 +1,20 @@
 import os
+import math
 import cv2
 import shutil
 import numpy as np
 import matplotlib.pyplot as plt
 from concurrent.futures import ThreadPoolExecutor
 from PIL import Image
+
+
+def pad_image_to_multiple(image, multiple=64):
+    width, height = image.size
+    new_width = math.ceil(width / multiple) * multiple
+    new_height = math.ceil(height / multiple) * multiple
+    padded_image = Image.new("RGB", (new_width, new_height))
+    padded_image.paste(image, (0, 0))
+    return padded_image
 
 
 # Display images

@@ -12,7 +12,7 @@ python-dotenv>=0.5.1
 
 # additional requirements for computer vision project
 compressai==1.2.6
-albumentations  #==1.4.11
+albumentations
 gdown==5.2.0
 h5py==3.12.1
 matplotlib==3.9.1
@@ -21,6 +21,7 @@ optuna
 pandas==2.2.2
 pillow==10.2.0
 pyprojroot==0.3.0
+pycocotools==2.0.11
 PyYAML==6.0.1
 scikit-learn==1.5.1
 tensorboard==2.17.1
@@ -29,3 +30,4 @@ torchaudio==2.3.1
 torchmetrics
 torchsummary
 torchvision==0.18.1
+ultralytics==8.4.30

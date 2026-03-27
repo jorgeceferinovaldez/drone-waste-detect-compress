@@ -1,0 +1,26 @@
+# config.yaml
+
+data:
+  google_drive_file_id: "1LxVQ6na5njNsWWwYD_d2LswPoaRsor9C"  # ID del archivo en Google Drive
+  google_drive_file_id_tl1: "1GrI_yuVwTlDXK_x5YXmlVw1T1FsdImxu"  # ID del archivo en Google Drive del modelo preentrenado
+  raw_data_dir: "data/raw"
+  interim_data_dir: "data/interim"
+  processed_data_dir: "data/processed"
+  external_data_dir: "data/external"
+
+models:
+  trained_models_dir: "models"
+  predictions_dir: "models/predictions"
+  summaries_dir: "models/summaries"
+  pretrained_dir: "models/pretrained"  # Para almacenar los modelos preentrenados
+
+notebooks_dir: "notebooks"
+references_dir: "references"
+reports_dir: "reports"
+figures_dir: "reports/figures"
+
+docs_dir: "docs"
+requirements_file: "requirements.txt"
+setup_file: "setup.py"
+tox_file: "tox.ini"
+

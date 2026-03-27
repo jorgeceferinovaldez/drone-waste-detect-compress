@@ -315,55 +315,84 @@ mAP@0.5, mAP@0.5:0.95, Precision, Recall y F1-score por clase. Se analiza especi
 
 ### Descripción
 
-Este es el experimento de validación central de la tesis. Se mide y compara el rendimiento de dos arquitecturas de transmisión bajo las mismas condiciones de red: transmisión directa de imagen (baseline) versus transmisión de representación latente comprimida (sistema propuesto).
+Este es el experimento de validación central de la tesis. Se mide y compara el rendimiento de tres arquitecturas de transmisión bajo las mismas condiciones de red: imagen sin comprimir (baseline puro), imagen comprimida con JPEG (baseline de compresión tradicional) y representación latente comprimida con CompressAI `cheng2020-anchor` fine-tuned (sistema propuesto).
 
-### Las dos arquitecturas comparadas
+### Aclaración importante: CompressAI trabaja frame a frame
 
-**Arquitectura A — Transmisión directa (baseline):**
+CompressAI es un compresor de **imágenes estáticas**, no de video. No explota la redundancia temporal entre frames consecutivos como lo haría un codec de video (H.264, H.265, AV1). Cada frame se comprime de forma independiente. Esto es una limitación conocida y se declara explícitamente en la tesis como parte del alcance del trabajo.
+
+La estrategia adoptada para el experimento es **muestrear el video del dron a tasa fija** (1-5 fps) en lugar de procesar los 30 fps completos. Esto es válido porque el dron vuela lentamente sobre la costa y los residuos son estáticos: no se pierde información relevante para la detección al reducir la tasa de muestreo.
+
 ```
-MacBook M4 Pro → imagen JPEG → red → PC → YOLO → detecciones
+Video dron (30 fps)
+    ↓ muestreo a N fps (N = 1, 2 o 5)
+Frames individuales
+    ↓ CompressAI encoder (frame a frame)
+Bytes comprimidos por frame
 ```
 
-**Arquitectura B — Transmisión comprimida (sistema propuesto):**
+### Las tres arquitecturas comparadas
+
+**Arquitectura A — Transmisión sin compresión (baseline puro):**
 ```
-MacBook M4 Pro → CompressAI encoder → bytes latentes → red → PC → CompressAI decoder → YOLO → detecciones
+MacBook M4 Pro → frame JPG calidad 100 → red → PC → YOLO → detecciones
 ```
 
-### Variables medidas en cada experimento
+**Arquitectura B — Transmisión con JPEG (baseline compresión tradicional):**
+```
+MacBook M4 Pro → frame JPEG (calidades 10-95) → red → PC → YOLO → detecciones
+```
 
-| Variable | Unidad | Arquitectura A | Arquitectura B |
-|---|---|---|---|
-| Bytes transmitidos | KB / frame | Tamaño JPEG | Tamaño stream latente |
-| Ratio de compresión | × | 1× (referencia) | Variable según q |
-| Tiempo de encode | ms | — | Encoder en M4 Pro |
-| Tiempo de transmisión | ms | Depende de red y tamaño | Depende de red y tamaño |
-| Tiempo de decode | ms | — | Decoder en RTX |
-| Latencia total pipeline | ms | tx | encode + tx + decode |
-| Frames por segundo efectivos | fps | Limitado por tx | Limitado por encode + tx |
-| PSNR imagen reconstruida | dB | — | Variable según q |
-| mAP@0.5 detección | % | Baseline | Degradación por compresión |
+**Arquitectura C — Transmisión con CompressAI (sistema propuesto):**
+```
+MacBook M4 Pro → cheng2020-anchor encoder → bytes latentes → red → PC → cheng2020-anchor decoder → YOLO → detecciones
+```
+
+Comparar contra JPEG es fundamental porque es el estándar de facto para transmisión de imágenes. Si `cheng2020-anchor` fine-tuned en residuos costeros supera la curva BPP vs mAP de JPEG para este dominio específico, ese es el resultado central del paper.
+
+### Variables medidas por arquitectura
+
+| Variable | Unidad | Arq. A | Arq. B | Arq. C |
+|---|---|---|---|---|
+| Bytes transmitidos | KB / frame | Tamaño JPG calidad 100 | Tamaño JPEG | Tamaño latente CompressAI |
+| BPP efectivo | bits/píxel | Alto (referencia) | Medio (variable) | Bajo (variable según q) |
+| Tiempo de encode | ms | — | Muy bajo (~1 ms) | Moderado (encoder M4 Pro) |
+| Tiempo de transmisión | ms | Alto | Medio | Bajo |
+| Tiempo de decode | ms | — | Muy bajo (~1 ms) | Moderado (decoder RTX) |
+| Latencia total pipeline | ms | tx | tx + encode + decode | tx + encode + decode |
+| FPS efectivos | fps | Limitado por tx | Limitado por tx | Limitado por encode + tx |
+| PSNR reconstrucción | dB | — | Variable con calidad JPEG | Variable con q |
+| mAP@0.5 YOLO | % | Referencia máxima | Degradación por JPEG | Degradación por CompressAI |
 
 ### Niveles de calidad evaluados
 
-El experimento se repite para q = 1, 2, 3, 4, 5, 6 de CompressAI. Esto genera una familia de curvas que muestran cómo evoluciona cada variable al aumentar la calidad de compresión. El resultado principal es la curva BPP vs mAP: el punto donde la compresión es suficientemente agresiva para reducir la carga de transmisión sin degradar la detección por debajo de un umbral aceptable.
+- **JPEG:** calidades 10, 20, 30, 50, 70, 85, 95 (rango completo).
+- **CompressAI `cheng2020-anchor`:** q = 1, 2, 3, 4, 5, 6.
+
+El resultado principal es la **curva BPP vs mAP** para Arquitectura B y C superpuestas: si la curva C (CompressAI fine-tuned) queda por encima de la curva B (JPEG) para los mismos BPP, significa que el modelo de deep learning preserva mejor la información relevante para detección de residuos a igual tasa de bits.
 
 ### Condiciones de red evaluadas
 
-| Escenario | Ancho de banda | Relevancia para la tesis |
+| Escenario | Ancho de banda | Relevancia |
 |---|---|---|
 | Red local (Ethernet / WiFi) | 50-100 Mbps | Laboratorio, condición ideal |
 | 4G / LTE | 10-20 Mbps | Campo con cobertura celular |
 | Starlink Mini | 20-100 Mbps variable | Costa patagónica remota |
 | Canal limitado simulado | 1-5 Mbps | Escenario adverso, mayor beneficio de compresión |
 
-La ventaja relativa de la Arquitectura B aumenta cuanto más estrecho es el canal: en red local la compresión puede no justificarse, pero en canal limitado o Starlink con variabilidad, la reducción de bytes transmitidos se traduce directamente en mayor fps efectivo.
+La ventaja de la Arquitectura C aumenta cuanto más estrecho es el canal. En canal limitado (1-5 Mbps), la reducción de bytes que logra CompressAI frente a JPEG se traduce directamente en mayor fps efectivo y menor latencia.
+
+### Herramienta de referencia: CompressAI-Vision
+
+CompressAI-Vision (InterDigital, open source, adoptada por MPEG para el estándar Feature Coding for Machines) es una plataforma que automatiza exactamente este tipo de evaluación BPP vs mAP para pipelines de compresión + visión. No se usa directamente en esta tesis por restricciones de compatibilidad (requiere Python 3.8) y porque implementar el experimento propio permite mayor control sobre las condiciones de medición. Sin embargo, se menciona como referencia metodológica y se propone como línea de trabajo futuro para comparación bajo condiciones estandarizadas MPEG.
 
 ### Entregable
 
-- Tabla de resultados completa por q y por condición de red.
-- Gráficas: BPP vs q, latencia vs q, mAP vs q, FPS efectivos vs ancho de banda.
-- Curva rate-distortion extendida: BPP vs mAP (aporte central del paper).
-- Análisis del punto óptimo de operación por escenario de red.
+- Tabla de resultados completa para las tres arquitecturas, por nivel de calidad y condición de red.
+- Gráficas: BPP vs mAP (curvas A, B y C superpuestas), latencia vs BPP, FPS efectivos vs ancho de banda.
+- Curva rate-distortion por arquitectura: BPP vs PSNR/SSIM.
+- Análisis del punto óptimo de operación: mejor balance BPP / mAP por escenario de red.
+- Conclusión cuantificada: cuántos bytes ahorra CompressAI frente a JPEG para igual mAP en el dominio de residuos costeros.
 
 ---
 
@@ -430,16 +459,28 @@ Valor inicial sugerido: `conf=0.4`. Si hay muchos falsos positivos sobre algas o
 
 Consolidación y análisis de todos los resultados experimentales. Se generan las figuras y tablas del documento de tesis, se compara el sistema con el estado del arte en compresión de imágenes con deep learning y en detección de residuos costeros, y se extraen las conclusiones sobre la viabilidad de la arquitectura compresión + reconstrucción + detección para monitoreo costero en entornos con recursos de transmisión limitados como la costa patagónica.
 
-### Resultado principal: curva BPP vs mAP
+### Resultado principal: curvas BPP vs mAP
 
-La pregunta central que responde la tesis: ¿hasta qué nivel de compresión (BPP) se puede llevar una imagen de residuos costeros sin que la precisión del detector YOLO caiga por debajo de un umbral aceptable para el monitoreo ambiental? Esta curva es el aporte más significativo para la comunidad de visión por computadora aplicada a gestión de residuos y monitoreo costero.
+La pregunta central que responde la tesis: ¿supera `cheng2020-anchor` fine-tuned en residuos costeros la curva BPP vs mAP de JPEG para este dominio específico? Si la curva de CompressAI queda por encima de la curva JPEG para iguales BPP, significa que el modelo de deep learning preserva mejor la información relevante para detección a igual tasa de bits. Ese es el resultado principal del paper.
+
+Se generan tres curvas superpuestas:
+- **Curva A:** mAP sobre imagen sin comprimir (línea horizontal de referencia).
+- **Curva B:** mAP vs BPP con JPEG (calidades 10 a 95).
+- **Curva C:** mAP vs BPP con CompressAI cheng2020-anchor fine-tuned (q=1 a q=6).
 
 ### Análisis adicionales
 
 - Impacto por clase: qué tipos de residuos toleran mejor la compresión (poliestireno blanco probablemente mejor que film plástico transparente).
 - Análisis de artefactos: qué introduce la reconstrucción a distintos BPP y cómo afecta al detector.
-- Comparación con JPEG: BPP vs mAP con compresión JPEG tradicional vs CompressAI.
-- Viabilidad de edge computing: análisis de latencia por dispositivo de borde (M4 Pro, Jetson, RPi5).
+- Comparación CompressAI vs JPEG: ganancia en BPP para igual mAP — cuánto más eficiente es el modelo de deep learning frente al codec tradicional en el dominio específico de residuos costeros.
+- Viabilidad de edge computing: análisis de latencia de encode por dispositivo (M4 Pro, Jetson Orin Nano, RPi5).
+- Impacto del muestreo de frames: comparar detección a 1, 2 y 5 fps para determinar la mínima tasa de muestreo que preserva cobertura adecuada de la costa.
+
+### Trabajo futuro
+
+- **CompressAI-Vision:** plataforma open source de InterDigital adoptada por MPEG para evaluación estandarizada de pipelines compresión + visión (Feature Coding for Machines). Permitiría comparar el sistema propuesto contra codecs estándar (H.265/VVC) bajo condiciones de test MPEG reproducibles. No se usa en esta tesis por compatibilidad de entorno (requiere Python 3.8), pero es la extensión natural del trabajo para una publicación en revista.
+- **Compresión de video con deep learning:** modelos como DVC o DCVC que explotan redundancia temporal entre frames, a diferencia de CompressAI que comprime cada frame de forma independiente. Relevante para aumentar el fps efectivo en escenarios de transmisión de video continuo.
+- **Split inference:** en lugar de comprimir la imagen y reconstruirla en el servidor, comprimir las features intermedias del propio modelo YOLO (compresión en el espacio de features, no en el espacio de imagen). CompressAI-Vision soporta este escenario nativamente.
 
 ### Mapas de distribución de residuos
 

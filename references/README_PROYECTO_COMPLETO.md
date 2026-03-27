@@ -515,4 +515,47 @@ drone-waste-detect-compress/
 
 ---
 
+## Licencias
+
+Este proyecto utiliza licencias diferenciadas según el tipo de recurso:
+
+**Código fuente — MIT License**
+
+```
+MIT License
+
+Copyright (c) 2024 Jorge Ceferino Valdez
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+**Dataset — Creative Commons Attribution 4.0 International (CC BY 4.0)**
+
+El dataset de residuos costeros del Golfo San Jorge (imágenes y anotaciones) se publica bajo licencia [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Esto permite usar, modificar y redistribuir el dataset para cualquier propósito, incluso comercial, siempre que se cite la fuente original.
+
+Cita sugerida una vez publicado el dataset:
+
+```
+Valdez, J. C. (2025). Coastal waste dataset - Golfo San Jorge, Patagonia [Dataset].
+Zenodo / IEEE DataPort. https://doi.org/XXXXXXX
+```
+
+---
+
 *Maestría en Informática y Sistemas · UNPA · Caleta Olivia, Santa Cruz, Argentina*

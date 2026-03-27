@@ -88,3 +88,14 @@ target/
 # Mypy cache
 .mypy_cache/
 *.pth
+
+# Aider files
+.aider*
+
+# Claude files
+.claude*
+CLAUDE.md
+
+# MLflow tracks and databases
+mlruns/
+mlflow.db

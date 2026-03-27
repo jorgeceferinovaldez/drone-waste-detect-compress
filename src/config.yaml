@@ -12,11 +12,13 @@ data:
   external_data_dir: "data/external"
 
   # Datasets públicos de bootstrap (almacenados en data/external/)
+  # Nota: esta sección es documental; la sección external_datasets (al final del archivo)
+  # es la fuente canónica con IDs de descarga y parámetros de conversión.
   public_datasets:
-    beach_litter_uav:
-      name: "Beach-Litter-UAV"
-      n_images: 534
-      format: "yolo"
+    taco_tn_uav_2:
+      name: "TACO_TN_UAV_2"
+      n_images: 6460        # train: 4527, valid: 654, test: 1279
+      format: "yolov8_native"
     uavvaste:
       name: "UAVVaste"
       n_images: 772
@@ -220,6 +222,51 @@ throughput:
   # Resultado principal: curva BPP vs mAP (arquitecturas A, B, C superpuestas)
   output_csv: "reports/throughput_results.csv"
   output_figures_dir: "reports/figures/throughput"
+
+# ---------------------------------------------------------------------------
+# Datasets externos — Google Drive IDs y rutas de destino
+# ---------------------------------------------------------------------------
+external_datasets:
+  taco_tn_uav_2:
+    gdrive_id: "19xJYrkmv7HnwNIIwA6a4BBdu6YX4ZbpH"
+    dest: "data/external/TACO_TN_UAV_2"
+    format: "yolov8_native"   # formato YOLOv8 nativo, sin conversión; splits train/valid/test ya separados
+    nc: 9
+    names: ['aluminium wrap', 'cardboard', 'cigarette', 'general waste', 'glass', 'metal', 'paper', 'plastic', 'styrofoam']
+    license: "CC BY 4.0"
+    source_url: "https://universe.roboflow.com/trash-recognition-fixed/taco_tn_uav_2/dataset/3"
+    # Mapeo de las 9 clases originales a las 7 clases del proyecto.
+    # Limitación: 'aluminium wrap' se mapea a film_bolsa porque es el material flexible
+    # más cercano, pero es papel aluminio (no bolsas plásticas). Esta aproximación
+    # introduce ruido en la clase film_bolsa.
+    # Limitación: red_pesca no tiene equivalente en ningún dataset público;
+    # depende exclusivamente del dataset propio del dron.
+    class_mapping:
+      aluminium wrap: film_bolsa    # aproximación: aluminium wrap ≠ bolsa plástica
+      cardboard: otros
+      cigarette: otros
+      general waste: otros
+      glass: vidrio
+      metal: metal
+      paper: otros
+      plastic: plastico_rigido
+      styrofoam: poliestireno
+  uavvaste:
+    gdrive_id: "1wK7CzaT3eIHPCe6YKMfteQYcK2madKwP"
+    dest: "data/external/UAVVaste"
+    format: "coco"          # requiere conversión COCO → YOLO con convert_coco
+    annotations: "annotations/instances_default.json"
+    images_dir: "images"
+  taco:
+    gdrive_id: "1YoFb_1MHwDTKVqvtksbjApCqF2pkHFKC"
+    dest: "data/external/TACO"
+    format: "coco"          # requiere conversión COCO → YOLO con convert_coco
+    annotations: "annotations.json"
+    images_dir: "."         # imágenes organizadas en subdirectorios batch_1/ a batch_13/
+  drone_captures:
+    gdrive_id: ""           # TODO: completar cuando el dataset esté en Google Drive
+    dest: "data/raw/drone_captures/data"
+    format: "raw"           # frames crudos del dron DJI Mini 4 Pro
 
 # ---------------------------------------------------------------------------
 # Informes y figuras

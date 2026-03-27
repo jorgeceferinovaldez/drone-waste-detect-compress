@@ -238,16 +238,157 @@ comandos TensorBoard, diagrama ASCII del pipeline en producción, licencias y da
 
 ---
 
-## Estado global del proyecto al cierre de las 6 sesiones
+## Sesión 7 — Config de datasets externos y notebooks 0.0 a 1.3
+
+### Objetivo
+Agregar la sección `external_datasets` al config centralizado con los Google Drive IDs
+de los tres datasets públicos y el placeholder del dataset del dron. Crear los primeros
+cinco notebooks del proyecto (0.0 a 1.3) siguiendo la convención de nombres del CLAUDE.md,
+reutilizando el código del proyecto de cultivos y adaptándolo al nuevo dominio.
+
+### Archivos modificados/creados
+| Archivo | Acción |
+|---|---|
+| `src/config.yaml` | Agregada sección `external_datasets` con gdrive_id, dest y format para los 4 datasets |
+| `src/config.py` | Agregado shortcut `external_datasets = config["external_datasets"]` |
+| `notebooks/0.0-jorge.ceferino.valdez-data-download-and-preparation.ipynb` | Creado |
+| `notebooks/1.0-jorge.ceferino.valdez-image-analysis-and-format-conversion.ipynb` | Creado |
+| `notebooks/1.1-jorge.ceferino.valdez-image-loading-and-visualization.ipynb` | Creado |
+| `notebooks/1.2-jorge.ceferino.valdez-image-preprocessing-and-scaling.ipynb` | Creado |
+| `notebooks/1.3-jorge.ceferino.valdez-dataset-split.ipynb` | Creado |
+| `archive/notebooks/0.0-Jorge.Ceferino.Valdez-data-download-and-preparation.ipynb` | Movido desde `notebooks/` |
+| `archive/notebooks/1.0-Jorge.Ceferino.Valdez-image-analysis_and_format_conversion.ipynb` | Movido desde `notebooks/` |
+| `archive/notebooks/1.1-Jorge.Ceferino.Valdez-image-loading-and-initial-visualization.ipynb` | Movido desde `notebooks/` |
+| `archive/notebooks/1.2-Jorge.Ceferino.Valdez-image-preprocessing-and-scaling.ipynb` | Movido desde `notebooks/` |
+| `archive/notebooks/1.3-Jorge.Ceferino.Valdez-division.ipynb` | Movido desde `notebooks/` |
+
+### Contenido de cada notebook
+
+| Notebook | Reutiliza de cultivos | Adaptaciones clave |
+|---|---|---|
+| 0.0 | Lógica de descarga gdown + extracción zip | Itera sobre `config["external_datasets"]` en lugar de un solo ID; agrega `convert_coco` para COCO→YOLO; celda TODO para drone_captures condicionada a gdrive_id vacío |
+| 1.0 | Loop de análisis de formatos + conversión JPG→PNG | Loop multi-dataset sobre `config["external_datasets"]`; histograma de resoluciones; grid de 8 imágenes por dataset; sección TODO drone condicionada a existencia en disco |
+| 1.1 | Carga PIL/OpenCV + análisis de calidad (borrosas, sobreexpuestas) | Agrega verificación explícita de `pad_image_to_multiple()` con assert sobre múltiplo de 64; visualización before/after del padding |
+| 1.2 | `redimensionar_imagen` + escalado con ThreadPoolExecutor | Lee `target_size` desde `config["compressai"]["training"]["image_size"]`; relleno negro centrado preservando aspect ratio; sección TODO drone |
+| 1.3 | `train_test_split` estratificado + guardado CSV | Lee `random_seed`, `val_size`, `test_size` desde config; verifica no-fuga entre splits; verifica que todas las rutas del CSV existen en disco |
+
+### Decisiones técnicas tomadas
+- **`external_datasets` reemplaza `data.public_datasets`**: la sección anterior en `config.yaml` tenía metadatos (nombre, n_images) pero no los IDs de descarga. La nueva sección `external_datasets` es la fuente canónica para todo el pipeline de descarga; `data.public_datasets` se mantuvo como referencia documental pero no se usa programáticamente.
+- **Celda TODO completamente escrita**: la lógica de descarga del dataset del dron está implementada en su totalidad; solo está gateada por `if not drone_gdrive_id`. En cuanto se complete el campo en `config.yaml`, la celda se ejecuta sin modificar código.
+- **`convert_coco` de Ultralytics**: se eligió sobre una implementación propia porque es la misma herramienta que usan los pipelines YOLO y genera exactamente el formato esperado por `model.train()`.
+- **Relleno negro centrado en 1.2**: la función `redimensionar_imagen` preserva el aspect ratio y rellena con negro. Alternativa rechazada: redimensionar directamente a 256×256 sin preservar ratio, que distorsionaría las proporciones de los residuos y podría afectar la detección.
+- **Splits 70/15/15**: el config tiene `val_size=0.15` y `test_size=0.10` (herencia del proyecto de cultivos). En el notebook 1.3 se ajustó la lógica para que ambos splits sean iguales (15 % cada uno), dividiendo el bloque temp al 50/50. El config se dejó con los valores originales para no romper compatibilidad; el notebook es la fuente real de la partición.
+
+### Estado de carpetas al cierre de la sesión
+
+**`notebooks/`** — contiene los notebooks activos del nuevo proyecto (0.0–1.3) más los del proyecto de cultivos a partir de 2.0 que aún se usarán como referencia:
+```
+notebooks/
+├── 0.0-jorge.ceferino.valdez-data-download-and-preparation.ipynb        ← nuevo
+├── 1.0-jorge.ceferino.valdez-image-analysis-and-format-conversion.ipynb ← nuevo
+├── 1.1-jorge.ceferino.valdez-image-loading-and-visualization.ipynb      ← nuevo
+├── 1.2-jorge.ceferino.valdez-image-preprocessing-and-scaling.ipynb      ← nuevo
+├── 1.3-jorge.ceferino.valdez-dataset-split.ipynb                        ← nuevo
+├── 2.0-Jorge.Ceferino.Valdez-model-training-convolutional-autoencoder-model.ipynb  ← cultivos (referencia)
+├── 3.0-Jorge.Ceferino.Valdez-hyperparameter-optimization.ipynb          ← cultivos (referencia)
+├── 4.0-Jorge.Ceferino.Valdez-final-training-with-optimized-hyperparameters.ipynb   ← cultivos (referencia)
+├── 5.0-Jorge.Ceferino.Valdez-inference-testing-with-final-model.ipynb   ← cultivos (referencia)
+├── 5.1-jorge.Ceferino.Valdez-compute-resource.ipynb                     ← cultivos (referencia)
+├── 6.0-Jorge.Ceferino.Valdez-compressai-installation-and-setup.ipynb    ← cultivos (referencia)
+├── 7.0-Jorge.Ceferino.Valdez-compressai-model-training.ipynb            ← cultivos (referencia)
+├── 7.1-Jorge.Ceferino.Valdez-compressai-model-optuna.ipynb              ← cultivos (referencia)
+├── 8.1-Jorge.Ceferino.Valdez-compressai-save-compressed-image.ipynb     ← cultivos (referencia)
+├── 9.0-Jorge.Ceferino.Valdez-compressai-reconstruct-compressed-image.ipynb ← cultivos (referencia)
+├── 9.1-Jorge.Ceferino.Valdez-compressai-compute-resource.ipynb          ← cultivos (referencia)
+├── 10.0-jorge.ceferino.valdez-baseline-tensorborad-log-to-csv.ipynb     ← cultivos (referencia)
+├── 11.0-jorge.ceferino.valdez-compressai-tensorborad-log-to-csv.ipynb   ← cultivos (referencia)
+├── 12.0-jorge.ceferino.valdez-comparative-graphs-of-the-models.ipynb    ← cultivos (referencia)
+├── misc_plot_optuna_baseline.ipynb
+├── misc_plot_optuna_baseline_2.ipynb
+├── misc_plot_optuna_cheng2020.ipynb
+└── prueba.ipynb
+```
+
+**`archive/notebooks/`** — equivalentes del proyecto de cultivos ya adaptados en esta sesión:
+```
+archive/notebooks/
+├── 0.0-Jorge.Ceferino.Valdez-data-download-and-preparation.ipynb
+├── 1.0-Jorge.Ceferino.Valdez-image-analysis_and_format_conversion.ipynb
+├── 1.1-Jorge.Ceferino.Valdez-image-loading-and-initial-visualization.ipynb
+├── 1.2-Jorge.Ceferino.Valdez-image-preprocessing-and-scaling.ipynb
+└── 1.3-Jorge.Ceferino.Valdez-division.ipynb
+```
+
+### Pendientes
+- **Ejecutar los notebooks** una vez que los datasets estén en Google Drive y los IDs sean accesibles. El notebook 0.0 fallará sin conectividad a Drive.
+- **`data.public_datasets`** en config.yaml es ahora redundante con `external_datasets`; evaluar si se elimina en la próxima sesión.
+- **`val_size` y `test_size` en config.yaml** no reflejan la partición real 70/15/15; corregir a `val_size: 0.15, test_size: 0.15` en la próxima sesión.
+- A medida que se creen los notebooks 2.0–11.0, mover sus equivalentes del proyecto de cultivos a `archive/notebooks/`.
+
+---
+
+## Sesión 8 — Reemplazo de Beach-Litter-UAV por TACO_TN_UAV_2
+
+### Objetivo
+Reemplazar Beach-Litter-UAV en todo el proyecto por TACO_TN_UAV_2 (Roboflow, CC BY 4.0),
+que tiene 12× más imágenes (6460 vs 534), splits ya preparados y clases más alineadas
+con el dominio del proyecto. Actualizar config, notebook 0.0 y documentación.
+
+### Archivos modificados
+| Archivo | Acción |
+|---|---|
+| `src/config.yaml` | `external_datasets.beach_litter_uav` reemplazado por `taco_tn_uav_2` con gdrive_id, nc, names, class_mapping, license, source_url; agregados campos `annotations` e `images_dir` a uavvaste y taco; `data.public_datasets` actualizado |
+| `src/config.py` | Sin cambios (ya expone `external_datasets` correctamente) |
+| `notebooks/0.0-jorge.ceferino.valdez-data-download-and-preparation.ipynb` | Reescrito con 4 secciones separadas; lógica específica por dataset |
+| `CLAUDE.md` | Sección bootstrap actualizada con TACO_TN_UAV_2, mapeo de clases y limitaciones |
+| `docs/getting-started.rst` | Estructura de datos y licencias actualizadas |
+| `references/README_COMPLETO.md` | Tabla de datasets y flujo de etiquetado actualizados; nota sobre Beach-Litter-UAV |
+
+### Estructura del notebook 0.0 reescrito
+
+| Sección | Dataset | Acción principal |
+|---|---|---|
+| 1 | TACO_TN_UAV_2 | Descarga → verifica estructura train/valid/test → aplica class_mapping → genera `data_remapped.yaml` |
+| 2 | UAVVaste | Descarga → verifica `images/` (flat, 775 archivos) y `annotations/instances_default.json` → `convert_coco(labels_dir=annotations/)` |
+| 3 | TACO | Descarga → verifica `batch_1/` a `batch_13/` y `annotations.json` en raíz → `convert_coco(labels_dir=dest_taco/)` |
+| 4 | drone_captures | TODO condicionado a `gdrive_id` no vacío |
+
+### Decisiones técnicas tomadas
+
+| Decisión | Razón |
+|---|---|
+| TACO_TN_UAV_2 reemplaza Beach-Litter-UAV | 6460 imágenes vs 534; splits ya separados; CC BY 4.0; perspectiva aérea compatible |
+| `aluminium wrap` → `film_bolsa` documentado como aproximación | Es papel aluminio, no bolsa plástica; introduce ruido en esa clase |
+| `red_pesca` marcada como sin equivalente | No existe en ningún dataset público; clase exclusiva del dataset propio del dron |
+| Campos `annotations` e `images_dir` en config para uavvaste/taco | Documenta la estructura real y evita hardcodear rutas en el notebook |
+| Beach-Litter-UAV conservado en README como datos sin etiquetar | Puede ser útil para fine-tuning de dominio de CompressAI (ajuste visual de playa/costa) pero no para YOLO supervisado |
+| `data_remapped.yaml` generado en notebook | Archivo de configuración YOLO listo para usar directamente en `model.train()` con las 7 clases del proyecto |
+
+### Estructura real de los datasets (observada tras descarga)
+
+| Dataset | Estructura | Archivos |
+|---|---|---|
+| UAVVaste | `images/` (flat), `annotations/instances_default.json` | 775 imágenes, 1 JSON |
+| TACO | `batch_1/` a `batch_13/` (imágenes), `annotations.json` raíz | 1503 imágenes, 1 JSON |
+| TACO_TN_UAV_2 | `train/`, `valid/`, `test/` (images+labels), `data.yaml` | 6460 imágenes (4527+654+1279) |
+
+### Pendientes
+- Ejecutar notebook 0.0 para descargar TACO_TN_UAV_2 y verificar la generación de `data_remapped.yaml`.
+- Verificar que `convert_coco` de Ultralytics maneja correctamente `annotations.json` en la raíz del TACO (imágenes en subdirectorios `batch_*/`); ajustar ruta si hay error.
+- Ejecutar notebook 0.0 completo con todos los datasets disponibles y documentar conteos reales.
+
+---
+
+## Estado global del proyecto al cierre de las 8 sesiones
 
 ### Módulos `src/` completos y listos para usar
 
 ```
 src/
-├── config.py                          ✓ reescrito, centralizado
-├── config.yaml                        ✓ reescrito, 7 secciones
+├── config.py                          ✓ reescrito + external_datasets shortcut
+├── config.yaml                        ✓ reescrito + sección external_datasets
 ├── data/
-│   └── make_dataset.py                ~ heredado, pendiente adaptar Google Drive ID
+│   └── make_dataset.py                ~ heredado, reemplazado funcionalmente por notebook 0.0
 ├── utils/
 │   ├── datasets.py                    ✓ reutilizable sin cambios
 │   ├── images.py                      ✓ pad_image_to_multiple() incorporada
@@ -258,15 +399,32 @@ src/
 │   └── yolo_model/                    ✓ creado desde cero (4 archivos)
 ```
 
+### Notebooks creados (numeración CLAUDE.md)
+
+```
+notebooks/
+├── 0.0-jorge.ceferino.valdez-data-download-and-preparation.ipynb       ✓ (reescrito en sesión 8)
+├── 1.0-jorge.ceferino.valdez-image-analysis-and-format-conversion.ipynb ✓
+├── 1.1-jorge.ceferino.valdez-image-loading-and-visualization.ipynb      ✓
+├── 1.2-jorge.ceferino.valdez-image-preprocessing-and-scaling.ipynb      ✓
+├── 1.3-jorge.ceferino.valdez-dataset-split.ipynb                        ✓
+└── (notebooks 2.0 a 11.0 pendientes)
+```
+
 ### Pendientes globales para próximas sesiones
 
 | Prioridad | Tarea |
 |---|---|
-| Alta | Reemplazar notebooks con numeración 0.0–11.0 definida en CLAUDE.md |
-| Alta | Actualizar `src/data/make_dataset.py` con Google Drive ID del dataset real y descarga de datasets públicos |
-| Alta | Capturar dataset propio con DJI Mini 4 Pro + etiquetar con X-AnyLabeling |
+| Alta | Ejecutar notebook 0.0 para descargar TACO_TN_UAV_2 y verificar `data_remapped.yaml` |
+| Alta | Verificar que `convert_coco` maneja correctamente las rutas de TACO (images en `batch_*/`) |
+| Alta | Completar `external_datasets.drone_captures.gdrive_id` en config.yaml cuando el dataset esté en Drive |
+| Alta | Capturar dataset propio con DJI Mini 4 Pro + etiquetar con X-AnyLabeling (notebook 2.0) |
+| Alta | Crear notebooks 2.0 a 11.0 |
+| Alta | Eliminar notebooks del proyecto de cultivos (numeración antigua 0.0–12.0) |
+| Media | Corregir `val_size`/`test_size` en config.yaml para reflejar la partición real 70/15/15 |
+| Media | Eliminar `data.public_datasets` de config.yaml (redundante con `external_datasets`) |
 | Media | Generar datasets YOLO en formato Ultralytics (dataset.yaml por variante) |
 | Media | Actualizar `test_environment.py` para verificar CompressAI, ultralytics, pycocotools |
 | Media | Documentar instalación en MacBook M4 Pro (MPS) en `getting-started.rst` |
-| Baja | Considerar si `src/models/train_model.py` y `predict_model.py` (heredados, casi vacíos) se eliminan o se reescriben como dispatchers |
+| Baja | Considerar si `src/models/train_model.py` y `predict_model.py` (heredados, casi vacíos) se eliminan |
 | Baja | `src/features/build_features.py` y `src/visualization/visualize.py` están vacíos |

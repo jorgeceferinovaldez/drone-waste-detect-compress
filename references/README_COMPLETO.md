@@ -146,13 +146,15 @@ Para acelerar el auto-etiquetado inicial, se usan como semilla los siguientes da
 
 | Dataset | Imágenes | Formato | Relevancia |
 |---|---|---|---|
-| Beach-Litter-UAV | 534 | YOLO nativo | Dron sobre playas, 5 clases, perspectiva cenital exacta |
+| TACO_TN_UAV_2 | 6460 (train 4527 / valid 654 / test 1279) | YOLOv8 nativo | Dron sobre basural/residuos, 9 clases, perspectiva cenital; CC BY 4.0 |
 | UAVVaste | 772 | COCO → convertir | Dron en entornos urbanos, residuos sobre suelo |
 | TACO | ~5200 | COCO → convertir | General de residuos, incluye escenas de playa |
 
+> **Nota sobre Beach-Litter-UAV:** se evaluó como candidato de bootstrap pero fue reemplazado por TACO_TN_UAV_2, que tiene más imágenes (6460 vs 534), splits ya preparados y licencia CC BY 4.0 compatible. Beach-Litter-UAV puede mantenerse como datos sin etiquetar para fine-tuning de CompressAI (ajuste de dominio visual de costa/playa) pero **no se usa para etiquetado YOLO ni entrenamiento supervisado** en este proyecto.
+
 ### Flujo de etiquetado con X-AnyLabeling
 
-1. Cargar `best.pt` preentrenado con Beach-Litter-UAV como auto-labeler inicial.
+1. Cargar `best.pt` preentrenado con TACO_TN_UAV_2 como auto-labeler inicial (remapeando clases según `class_mapping` del config).
 2. Ejecutar batch auto-label sobre todas las imágenes propias con un clic.
 3. Revisar cada imagen: aceptar predicciones correctas, ajustar las desplazadas, agregar residuos no detectados, eliminar falsos positivos.
 4. Exportar en formato YOLO: carpetas `images/` y `labels/` más archivo `data.yaml`.

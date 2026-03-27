@@ -89,9 +89,10 @@ tox_file          = make_dir_function(config["tox_file"])
 # Accesos directos a parámetros de entrenamiento
 # ---------------------------------------------------------------------------
 
-compressai_params  = config["compressai"]
-yolo_params        = config["yolo"]
-throughput_params  = config["throughput"]
+compressai_params    = config["compressai"]
+yolo_params          = config["yolo"]
+throughput_params    = config["throughput"]
+external_datasets    = config["external_datasets"]
 
 
 # ---------------------------------------------------------------------------

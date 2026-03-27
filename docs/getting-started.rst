@@ -154,7 +154,7 @@ La estructura esperada es::
    ├── raw/
    │   └── drone_captures/data/    ← frames originales del dron DJI Mini 4 Pro
    ├── external/                   ← datasets públicos de bootstrap
-   │   ├── Beach-Litter-UAV/       (534 imgs, formato YOLO nativo)
+   │   ├── TACO_TN_UAV_2/          (6460 imgs, formato YOLOv8 nativo, 9 clases → remapeo a 7)
    │   ├── UAVVaste/               (772 imgs, formato COCO → convertir)
    │   └── TACO/                   (5200 imgs, formato COCO → convertir)
    ├── interim/
@@ -270,7 +270,7 @@ Licencias
 - **Dataset propio**: CC BY 4.0 — publicado en Zenodo / IEEE DataPort
 - **Datasets de bootstrap**:
 
-  - Beach-Litter-UAV: ver licencia original del dataset
+  - TACO_TN_UAV_2: CC BY 4.0 (Roboflow — https://universe.roboflow.com/trash-recognition-fixed/taco_tn_uav_2)
   - UAVVaste: ver licencia original del dataset
   - TACO: MIT License
 
